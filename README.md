@@ -1,48 +1,49 @@
-redis-mod_luajit
-================
+valkey-mod_luajit
+=================
 
-Redis Module adding LuaJIT support
+[Valkey](https://valkey.io) Module adding LuaJIT support
 
-*This is very unstable! It also depends on experimental features of Redis!*
+*This is very unstable! It also depends on Valkey built without Lua.  This [support is in progress](https://github.com/valkey-io/valkey/issues/1204). *
 
 Install
 =======
-
-*IMPORTANT:* Currently, this module requires Redis to be statically linked with LuaJIT. I did that by copying the `libluajit-5.1.a` into the Redis tree and then relinking Redis.  Hopefully this can be remedied...
 
 Dependencies:
 
  * cmake
  * a C compiler
- * luajit-2.0
- * redis 4.0 beta
+ * luajit-2.1
+ * Valkey 8.0
 
 ```
-cd redis-mod_luajit
+cd valkey-mod_luajit
 cmake .
 make
 
 # install files to system paths
-sudo cp redismodule.lua /usr/local/share/lua/5.1/
-sudo cp libredis-mod_luajit.so /usr/local/lib
+sudo cp valkeymodule.lua /usr/local/share/lua/5.1/
+sudo cp libvalkey-mod_luajit.so /usr/local/lib
 ```
 
 Example
 =======
 
-Here's an example of loading the module, and invoking a simple reply, and registering a new Redis command using LuaJIT FFI callbacks.
+Here's an example of loading the module, and invoking a simple reply, and registering a new Valkey command using LuaJIT FFI callbacks.
 
 ```
-# must use Redis 4.0 redis-cli against Redis 4.0
-$ redis-cli
-172.0.0.1:6379> module load /usr/local/lib/libredis-mod_luajit.so
-172.0.0.1:6379> luajit.eval "RM.EvalCtx():ReplyWithSimpleString('hello from LuaJIT')"
+# start valkey with modules enabled
+$ echo 'enable-module-command yes' | valkey-server -
+
+# must use Valkey valkey-cli
+$ valkey-cli
+172.0.0.1:6379> module load /usr/local/lib/libvalkey-mod_luajit.so
+172.0.0.1:6379> luajit.eval "VKM.EvalCtx():ReplyWithSimpleString('hello from LuaJIT')"
 hello from LuaJIT
-127.0.0.1:6379> luajit.eval "RM.EvalCtx():CreateCommand('hello.lua', function(ctx,argv,argc) print('hello world', argc) ; return ctx:ReplyWithLongLong(420) ; end,'',1,1,1) ; RM.EvalCtx():ReplyWithLongLong(2)"
+127.0.0.1:6379> luajit.eval "VKM.EvalCtx():CreateCommand('hello.lua', function(ctx,argv,argc) print('hello world', argc) ; return ctx:ReplyWithLongLong(420) ; end,'',1,1,1) ; VKM.EvalCtx():ReplyWithLongLong(2)"
 (integer) 2
 127.0.0.1:6379> hello.lua
 (integer) 420
-[and you should see 'hello world    1' in the redis.log]
+[and you should see 'hello world    1' in the valkey.log]
 ```
 
 TODO
@@ -60,17 +61,20 @@ TODO
 Backstory
 =========
 
-Several years ago, I spent some time exploring deeper integration of LuaJIT with Redis.  My beef was that the existing Lua Scripting does so much marshalling and other work that might not be needed.  As I dove in, I reallized what I was making was low-level wrappers around Redis internals.  I gave up after a while because I knew it would never be merged.
+In 2013, I spent some time exploring deeper integration of [LuaJIT with Redis 2.6](https://github.com/redis/redis/compare/unstable...neomantra:redis:luajit_ffi).  My beef was that the existing Lua Scripting does so much marshalling and other work that might not be needed.  As I dove in, I reallized what I was making was low-level wrappers around Redis internals.  I gave up after a while because I knew it would never be merged.
 
-But recently @antirez released a preview of the [Redis Module API](https://github.com/antirez/redis/blob/unstable/src/modules/INTRO.md).  It was basically what I wanted before, so I am starting to explore the ideas again.
+In 2016, @antirez released a preview of the [Redis Module API](https://github.com/antirez/redis/blob/unstable/src/modules/INTRO.md).  It was basically what I wanted before, so I am starting to explore the ideas again.
+
+In 2024, Valkey enabled the removal of the statically-linked Lua engine, allowing the creation of a LuaJIT-injecting Valkey module.   Since it's possible, it makes sense to update the project to use the [Valkey Module API](https://valkey.io/topics/modules-api-ref/).  Note that this is not equivalient to Valkey's [Lua Scripting](https://valkey.io/topics/eval-intro/) in that **it is not sandboxed**.
 
 License
 =======
 
-BSD-license, just like Redis. See the file COPYING.
+BSD-licensed, just like Redis and Valkey. See the file `COPYING`.
 
 ```
-Copyright (c) 2016, Evan Wies.
+Copyright (c) 2016-2024, Evan Wies. evan@neomantra.net
+
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:

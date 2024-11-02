@@ -2,4 +2,4 @@ CMakeCache.txt
 CMakeFiles/
 Makefile
 cmake_install.cmake
-libredis-mod_luajit.so
+libvalkey-mod_luajit.so
